@@ -1,6 +1,5 @@
 
-
-import new_succ as bcs
+# import new_succ as bcs
 
 def winTester(s):
   possibleWin = "No win"
