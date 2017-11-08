@@ -54,7 +54,7 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
             for move in allMoves:
                 newlist = listOfStates.append(getState(lastboard, move))
                 nextStates.append(newlist) #for all the generated moves, generate the new state, and append the new state to the previous list of states.     
-                nextPQ.insert(newlist, ((-1)**newState.whose_move)staticEval(newlist, len(allMoves), startAt, timelimit))
+                nextPQ.insert(newlist, ((-1)**newState.whose_move)*staticEval(newlist, len(allMoves), startAt, timelimit))
 
                 if time.time() - startAt < timelimit*0.97:
                     break
