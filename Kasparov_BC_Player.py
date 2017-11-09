@@ -5,7 +5,6 @@ The beginnings of an agent that might someday play Baroque Chess.
 
 import time
 import BC_state_etc as BC
-from priorityq2 import PriorityQ
 
 #for reference
 BLACK = 0
@@ -34,16 +33,19 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
 
     # Fix up whose turn it will be.
     newState.whose_move = 1 - currentState.whose_move
+
     board = newState.board
-    priQ = PriorityQ()
     startAt = time.time()
+    bestrating = 0
+    bestMove = []
 
     allStates = [[board]] #list of list of states
+
     while True:
         if time.time() - startAt < timelimit*0.97:
             break
         nextStates = []
-        nextPQ = PriorityQ()
+        depthXrating = 100000 #reset rating to something big
         for listOfStates in allStates:
             lastboard = listOfStates[len(listOfStates)-1] #look at the last state in a list of states
             allMoves = getAllMoves(lastboard, whoseMov) #get all possible moves from that last state
@@ -53,8 +55,16 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
 
             for move in allMoves:
                 newlist = listOfStates.append(getState(lastboard, move))
+                rating = ((-1)**newState.whose_move)*staticEval(newlist, len(allMoves), startAt, timelimit)
+                #rating => the smaller, the better it is for US, THIS player
+                #if we are white, whosemove=1, good move = big => -1**whosemove good move = small
+                #if we are black, whosemove=0, good move = small => -1**whosemove good move = small
+
                 nextStates.append(newlist) #for all the generated moves, generate the new state, and append the new state to the previous list of states.     
-                nextPQ.insert(newlist, ((-1)**newState.whose_move)*staticEval(newlist, len(allMoves), startAt, timelimit))
+                if rating < depthXrating:
+                    depthXrating = rating
+                    bestrating = rating
+                    bestMove = newlist
 
                 if time.time() - startAt < timelimit*0.97:
                     break
@@ -62,12 +72,10 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
         if time.time() - startAt < timelimit*0.97:
             break
 
-        priQ = nextPQ
         allStates = nextStates
 
     #assumes time is close to up.
     
-    bestMove = priQ.deletemin()[0]
     move = getMoveBeforeAfter(bestMove[0],bestMove[1])
     newState = bestMove[1]
 
@@ -78,9 +86,40 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
     #move = ((6, 4), (3, 4))
 
     # Make up a new remark
-    newRemark = "I'll think harder in some future game. Here's my move"
+    newRemark = getRemark(bestrating)
 
     return [[move, newState], newRemark]
+
+def getRemark(score):
+    if score > 500:
+        return "uh oh."
+    if score > 100:
+        return "This is real bad."
+    if score > 75:
+        return "I'm getting a little worried here."
+    if score > 50:
+        return "This isn't over yet!"
+    if score > 30:
+        return "You got me."
+    if score > 20:
+        return "Nice move."
+    if score > 10:
+        return "Finally we're getting somewhere."
+    if score > -5:
+        return "This is going nowhere."
+    if score > -15:
+        return "Finally we're getting somewhere."
+    if score > -25:
+        return "Take that!"
+    if score > -35:
+        return "Having a little trouble there?"
+    if score > -55:
+        return "You're free to give up."
+    if score > -75:
+        return "I'd like to see how you would get out of that."
+    if score > -100:
+        return "Victory is in sight!"
+    return "Good game."
 
 def getMoveBeforeAfter(oldstate, newstate):
     move = ((-1,-1),(-1,-1))
