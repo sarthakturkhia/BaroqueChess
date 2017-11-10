@@ -41,38 +41,38 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
     bestMove = []
 
     allStates = [[board]] #list of list of states
-
     while True:
-        if time.time() - startAt < timelimit*0.97:
+        if startAt - time.time() > timelimit*0.97:
             break
         nextStates = []
         depthXrating = 100000 #reset rating to something big
         for listOfStates in allStates:
             lastboard = listOfStates[len(listOfStates)-1] #look at the last state in a list of states
             allMoves = getAllMoves(lastboard, whoseMove) #get all possible moves from that last state
-
-            if time.time() - startAt < timelimit*0.97:
+            newlist = []
+            #print(allMoves)
+            #print("\n")
+            if startAt - time.time() > timelimit*0.97:
                 break
-
             for move in allMoves:
-                newlist = listOfStates.append(getState(move, lastboard))
-                rating = ((-1)**newState.whose_move)*staticEval(newlist, len(allMoves), startAt, timelimit)
+                newlist.append(listOfStates + getState(move, lastboard))
+                #print(newlist)
+                if startAt - time.time() > timelimit*0.97:
+                    break
+            #print(newlist)
+            rating = ((-1)**newState.whose_move)*staticEval2(newlist, len(allMoves), startAt, timelimit)
                 #rating => the smaller, the better it is for US, THIS player
                 #if we are white, whosemove=1, good move = big => -1**whosemove good move = small
                 #if we are black, whosemove=0, good move = small => -1**whosemove good move = small
-
-                nextStates.append(newlist) #for all the generated moves, generate the new state, and append the new state to the previous list of states.     
-                if rating < depthXrating:
-                    depthXrating = rating
-                    bestrating = rating
-                    bestMove = newlist
-
-                if time.time() - startAt < timelimit*0.97:
-                    break
+            nextStates.append(newlist) #for all the generated moves, generate the new state, and append the new state to the previous list of states.     
+            if rating < depthXrating:
+                depthXrating = rating
+                bestrating = rating
+                bestMove = newlist
 
             whoseMove = 1 - whoseMove
         
-        if time.time() - startAt < timelimit*0.97:
+        if startAt - time.time() > timelimit*0.97:
             break
 
         allStates = nextStates
@@ -157,8 +157,8 @@ def getState(move, state):
     # withdrawer
     elif piece - color == 10:
         if len(kingHelper(intlLoc, state, opoColor)) != 0:
-            dirY = inilLoc[0]-goalLoc[0]
-            dirX = inilLoc[1]-goalLoc[1]
+            dirY = intlLoc[0]-goalLoc[0]
+            dirX = intlLoc[1]-goalLoc[1]
             if dirY != 0:
                 dirY = dirY/abs(dirY)
             if dirX != 0:
@@ -238,15 +238,15 @@ def getAllMoves(currentState, whose_move):
             if current%2 == whose_move:
                 current = current - current%2
                 if current == 2:
-                    moves.append([((i,j),(x,y)) for (x,y) in pincer([i,j], currentState)])
+                    moves += [[[i,j],[x,y]] for [x,y] in pincer([i,j], currentState)]
                 elif current == 6:
-                    moves.append([((i,j),(x,y)) for (x,y) in knight([i,j], currentState)])
+                    moves += [[[i,j],[x,y]] for [x,y] in knight([i,j], currentState)]
                 elif current == 8:
-                    moves.append([((i,j),(x,y)) for (x,y) in imitator([i,j], currentState)])
+                    moves += [[[i,j],[x,y]] for [x,y] in imitator([i,j], currentState)]
                 elif current == 12:
-                    moves.append([((i,j),(x,y)) for (x,y) in king([i,j], currentState)])
+                    moves += [[[i,j],[x,y]] for [x,y] in king([i,j], currentState)]
                 else:
-                    moves.append([((i,j),(x,y)) for (x,y) in other([i,j], currentState)])
+                    moves += [[[i,j],[x,y]] for [x,y] in other([i,j], currentState)]
     return moves # moves is a list of elements in the form of ((x,y),(x2,y2))
     
 # These functions should take a position as a parameter and return a list of all possible positions of that piece
@@ -616,7 +616,7 @@ def other(loc, currentState):
         x = loc[0] - (1+i)
         y = loc[1]
         if x >= 0:
-            if currentState[x][y] != 0: #non-empty space, stop checking direction
+            if currentState[y][x] != 0: #non-empty space, stop checking direction
                 break;
             else:
                 moves.append((x,y))
@@ -628,7 +628,7 @@ def other(loc, currentState):
         x = loc[0] + (1+i)
         y = loc[1]
         if x <= 7:
-            if currentState[x][y] != 0: #non-empty space, stop checking direction
+            if currentState[y][x] != 0: #non-empty space, stop checking direction
                 break;
             else:
                 moves.append((x,y))
@@ -640,7 +640,7 @@ def other(loc, currentState):
         x = loc[0] 
         y = loc[1] + (1+i)
         if y <= 7:
-            if currentState[x][y] != 0: #non-empty space, stop checking direction
+            if currentState[y][x] != 0: #non-empty space, stop checking direction
                 break;
             else:
                 moves.append((x,y))
@@ -652,7 +652,7 @@ def other(loc, currentState):
         x = loc[0] 
         y = loc[1] - (1+i)
         if y >= 0:
-            if currentState[x][y] != 0: #non-empty space, stop checking direction
+            if currentState[y][x] != 0: #non-empty space, stop checking direction
                 break;
             else:
                 moves.append((x,y))
@@ -664,7 +664,7 @@ def other(loc, currentState):
         x = loc[0] - (1+i)
         y = loc[1] + (1+i)
         if x >= 0 & y <= 7:
-            if currentState[x][y] != 0: #non-empty space, stop checking direction
+            if currentState[y][x] != 0: #non-empty space, stop checking direction
                 break;
             else:
                 moves.append((x,y))
@@ -676,7 +676,7 @@ def other(loc, currentState):
         x = loc[0] - (1+i)
         y = loc[1] - (1+i)
         if x >= 0 & y >= 0:
-            if currentState[x][y] != 0: #non-empty space, stop checking direction
+            if currentState[y][x] != 0: #non-empty space, stop checking direction
                 break;
             else:
                 moves.append((x,y))
@@ -688,7 +688,7 @@ def other(loc, currentState):
         x = loc[0] + (1+i)
         y = loc[1] - (1+i)
         if x <= 7 & y >= 0:
-            if currentState[x][y] != 0: #non-empty space, stop checking direction
+            if currentState[y][x] != 0: #non-empty space, stop checking direction
                 break;
             else:
                 moves.append((x,y))
@@ -700,7 +700,7 @@ def other(loc, currentState):
         x = loc[0] + (1+i)
         y = loc[1] + (1+i)
         if x <= 7 & y <= 7:
-            if currentState[x][y] != 0: #non-empty space, stop checking direction
+            if currentState[y][x] != 0: #non-empty space, stop checking direction
                 break;
             else:
                 moves.append((x,y))
@@ -770,6 +770,7 @@ def prepare(player2Nickname):
 # the position index in comparision to opponents
 # pieces and our pieces in the kings diagonals, verticals and horizontals.
 def staticEval(state):
+    print(state)
     sum = 0
     for i in range(8):
         for j in range(8):
@@ -810,10 +811,11 @@ def staticEval(state):
                     sum -= len(whiteP)
     return sum
 
-def staticEval(states, nMoves, startTime, timelimit): #accepts a list of states and also the number of moves
+def staticEval2(states, nMoves, startTime, timelimit): #accepts a list of states and also the number of moves
     total = 0
     for state in states:
-        if time.time() - startTime < timelimit*0.97:
+        #print(state)
+        if startTime - time.time() > timelimit*0.97:
             break
         total += staticEval(state)
     return total / len(states)

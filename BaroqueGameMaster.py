@@ -24,7 +24,7 @@ if len(sys.argv) > 1:
         TIME_PER_MOVE = float(sys.argv[3])
 else:
     import Kasparov_BC_Player as player1
-    import PlayerSkeletonB as player2
+    import Kasparov_BC_Player as player2
 
 import BC_state_etc as BC
 
