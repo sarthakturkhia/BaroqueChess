@@ -31,7 +31,7 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
     newState = BC.BC_state(currentState.board)
 
     # Fix up whose turn it will be.
-    newState.whose_move = 1 - currentState.whose_move
+    # newState.whose_move = 1 - currentState.whose_move
     whoseMove = newState.whose_move
 
     board = newState.board
@@ -179,6 +179,7 @@ def getState(move, state):
                 dirX = dirX/abs(dirX)
             opoY = int(intlLoc[0]-dirY)
             opoX = int(intlLoc[1]-dirX)
+
             if opoY in range(8) and opoX in range(8) and resultstate[opoY][opoX]%2 == opoColor:
                 resultstate[opoY][opoX] = 0
 
