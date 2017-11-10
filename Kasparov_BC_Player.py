@@ -3,6 +3,7 @@ The beginnings of an agent that might someday play Baroque Chess.
 
 '''
 
+import time
 import BC_state_etc as BC
 
 #for reference
@@ -25,7 +26,7 @@ WHITE_WITHDRAWER  = 11
 WHITE_KING        = 13
 WHITE_FREEZER     = 15
 
-def makeMove(currentState, currentRemark, timelimit):
+def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
     # Compute the new state for a move.
     # This is a placeholder that just copies the current state.
     newState = BC.BC_state(currentState.board)
@@ -33,17 +34,61 @@ def makeMove(currentState, currentRemark, timelimit):
     # Fix up whose turn it will be.
     newState.whose_move = 1 - currentState.whose_move
 
+    board = newState.board
+    startAt = time.time()
+    bestrating = 0
+    bestMove = []
+
+    allStates = [[board]] #list of list of states
+
+    while True:
+        if time.time() - startAt < timelimit*0.97:
+            break
+        nextStates = []
+        depthXrating = 100000 #reset rating to something big
+        for listOfStates in allStates:
+            lastboard = listOfStates[len(listOfStates)-1] #look at the last state in a list of states
+            allMoves = getAllMoves(lastboard, whoseMove) #get all possible moves from that last state
+
+            if time.time() - startAt < timelimit*0.97:
+                break
+
+            for move in allMoves:
+                newlist = listOfStates.append(getState(lastboard, move))
+                rating = ((-1)**newState.whose_move)*staticEval(newlist, len(allMoves), startAt, timelimit)
+                #rating => the smaller, the better it is for US, THIS player
+                #if we are white, whosemove=1, good move = big => -1**whosemove good move = small
+                #if we are black, whosemove=0, good move = small => -1**whosemove good move = small
+
+                nextStates.append(newlist) #for all the generated moves, generate the new state, and append the new state to the previous list of states.     
+                if rating < depthXrating:
+                    depthXrating = rating
+                    bestrating = rating
+                    bestMove = newlist
+
+                if time.time() - startAt < timelimit*0.97:
+                    break
+        
+        if time.time() - startAt < timelimit*0.97:
+            break
+
+        allStates = nextStates
+
+    #assumes time is close to up.
+    
+    move = getMoveBeforeAfter(bestMove[0],bestMove[1])
+    newState = bestMove[1]
+
     # Construct a representation of the move that goes from the
     # currentState to the newState.
     # Here is a placeholder in the right format but with made-up
     # numbers:
-    move = ((6, 4), (3, 4))
+    #move = ((6, 4), (3, 4))
 
     # Make up a new remark
-    newRemark = "I'll think harder in some future game. Here's my move"
+    newRemark = getRemark(bestrating)
 
     return [[move, newState], newRemark]
-
 
 # takes a move and returns a new state of the complete board after the move was made
 def getState(move, state):
@@ -124,6 +169,67 @@ def getState(move, state):
     resultstate[goalLoc[1]][goalLoc[0]] = piece
     return resultstate
 
+def getRemark(score):
+    if score > 500:
+        return "uh oh."
+    if score > 100:
+        return "This is real bad."
+    if score > 75:
+        return "I'm getting a little worried here."
+    if score > 50:
+        return "This isn't over yet!"
+    if score > 30:
+        return "You got me."
+    if score > 20:
+        return "Nice move."
+    if score > 10:
+        return "Finally we're getting somewhere."
+    if score > -5:
+        return "This is going nowhere."
+    if score > -15:
+        return "Finally we're getting somewhere."
+    if score > -25:
+        return "Take that!"
+    if score > -35:
+        return "Having a little trouble there?"
+    if score > -55:
+        return "You're free to give up."
+    if score > -75:
+        return "I'd like to see how you would get out of that."
+    if score > -100:
+        return "Victory is in sight!"
+    return "Good game."
+
+def getMoveBeforeAfter(oldstate, newstate):
+    move = ((-1,-1),(-1,-1))
+    for i in range(7):
+        for j in range(7):
+            if not oldstate[i][j] == newstate[i][j] & oldstate[i][j] == 0:
+                move[1][0] = i
+                move[1][1] = j
+            elif not oldstate[i][j] == newstate[i][j] & newstate[i][j] == 0:
+                move[0][0] = i
+                move[0][1] = j
+    return move
+
+def getAllMoves(currentState, whose_move):
+    moves = []
+    for i in range(7):
+        for j in range(7):
+            current = currentState[i][j]
+            if current%2 == whose_move:
+                current = current - current%2
+                if current == 2:
+                    moves.append([((i,j),(x,y)) for (x,y) in pincer([i,j], currentState)])
+                elif current == 6:
+                    moves.append([((i,j),(x,y)) for (x,y) in knight([i,j], currentState)])
+                elif current == 8:
+                    moves.append([((i,j),(x,y)) for (x,y) in imitator([i,j], currentState)])
+                elif current == 12:
+                    moves.append([((i,j),(x,y)) for (x,y) in king([i,j], currentState)])
+                else:
+                    moves.append([((i,j),(x,y)) for (x,y) in other([i,j], currentState)])
+    return moves # moves is a list of elements in the form of ((x,y),(x2,y2))
 
 # These functions should take a position as a parameter and return a list of all possible positions of that piece
 def king(loc, currentState):
@@ -348,9 +454,10 @@ def knight(loc, currentState):
 
 def imitator(loc, currentState):
     moves = []
-    if checkFreezer(loc, currentState): return moves
-
-    color = currentState[loc[0]][loc[1]] % 2
+    if checkFreezer(loc, currentState): 
+        return moves
+    
+    color = currentState[loc[1]][loc[0]] % 2
     opponCol = 1 - color #opponent's color
 
     passLeap = False
@@ -363,11 +470,11 @@ def imitator(loc, currentState):
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check east
@@ -378,7 +485,7 @@ def imitator(loc, currentState):
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
@@ -393,11 +500,11 @@ def imitator(loc, currentState):
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check north
@@ -408,98 +515,225 @@ def imitator(loc, currentState):
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check southwest
     for i in range(7):
         x = loc[0] - (1+i)
         y = loc[1] + (1+i)
-        if x >= 0 and y <= 7:
+        if x >= 0 & y <= 7:
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check northwest
     for i in range(7):
         x = loc[0] - (1+i)
         y = loc[1] - (1+i)
-        if x >= 0 and y >= 0:
+        if x >= 0 & y >= 0:
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check northeast
     for i in range(7):
         x = loc[0] + (1+i)
         y = loc[1] - (1+i)
-        if x <= 7 and y >= 0:
+        if x <= 7 & y >= 0:
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check southeast
     for i in range(7):
         x = loc[0] + (1+i)
         y = loc[1] + (1+i)
-        if x <= 7 and y <= 7:
+        if x <= 7 & y <= 7:
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
+                break
+            else:
+                moves.append((x,y))
+        else:
+            break
+
+    return moves
+
+
+
+def other(loc, currentState):
+    moves = []
+    if checkFreezer(loc, currentState):
+        return moves
+    
+    color = currentState[loc[1]][loc[0]] % 2
+    opponCol = 1 - color #opponent's color
+
+    #check west
+    for i in range(7):
+        x = loc[0] - (1+i)
+        y = loc[1]
+        if x >= 0:
+            if currentState[x][y] != 0: #non-empty space, stop checking direction
                 break;
             else:
                 moves.append((x,y))
         else:
             break;
-
+    
+    #check east
+    for i in range(7):
+        x = loc[0] + (1+i)
+        y = loc[1]
+        if x <= 7:
+            if currentState[x][y] != 0: #non-empty space, stop checking direction
+                break;
+            else:
+                moves.append((x,y))
+        else:
+            break;
+    
+    #check south
+    for i in range(7):
+        x = loc[0] 
+        y = loc[1] + (1+i)
+        if y <= 7:
+            if currentState[x][y] != 0: #non-empty space, stop checking direction
+                break;
+            else:
+                moves.append((x,y))
+        else:
+            break;
+    
+    #check north
+    for i in range(7):
+        x = loc[0] 
+        y = loc[1] - (1+i)
+        if y >= 0:
+            if currentState[x][y] != 0: #non-empty space, stop checking direction
+                break;
+            else:
+                moves.append((x,y))
+        else:
+            break;
+    
+    #check southwest
+    for i in range(7):
+        x = loc[0] - (1+i)
+        y = loc[1] + (1+i)
+        if x >= 0 & y <= 7:
+            if currentState[x][y] != 0: #non-empty space, stop checking direction
+                break;
+            else:
+                moves.append((x,y))
+        else:
+            break;
+    
+    #check northwest
+    for i in range(7):
+        x = loc[0] - (1+i)
+        y = loc[1] - (1+i)
+        if x >= 0 & y >= 0:
+            if currentState[x][y] != 0: #non-empty space, stop checking direction
+                break;
+            else:
+                moves.append((x,y))
+        else:
+            break;
+    
+    #check northeast
+    for i in range(7):
+        x = loc[0] + (1+i)
+        y = loc[1] - (1+i)
+        if x <= 7 & y >= 0:
+            if currentState[x][y] != 0: #non-empty space, stop checking direction
+                break;
+            else:
+                moves.append((x,y))
+        else:
+            break;
+    
+    #check southeast
+    for i in range(7):
+        x = loc[0] + (1+i)
+        y = loc[1] + (1+i)
+        if x <= 7 & y <= 7:
+            if currentState[x][y] != 0: #non-empty space, stop checking direction
+                break;
+            else:
+                moves.append((x,y))
+        else:
+            break;
     return moves
-
-# def other():
 
 #returns true if there is an opponent's freezer in any of the 8 directions, else returns false
 def checkFreezer(loc, currentState):
     color = currentState[loc[0]][loc[1]] % 2
     opponCol = 1 - color #opponent's color
     if loc[0] > 0:
-        if currentState[loc[0]-1][loc[1]] == 14 + opponCol:
+        if currentState[loc[0]-1][loc[1]] == 8 + opponCol:
+            return checkFreezer((loc[0]-1, loc[1]), currentState)
+        elif currentState[loc[0]-1][loc[1]] == 14 + opponCol:
             return True
-        if loc [1] > 0 and currentState[loc[0]-1][loc[1]-1] == 14 + opponCol:
-            return True
-        if loc [1] < 7 and currentState[loc[0]-1][loc[1]+1] == 14 + opponCol:
-            return True
+        if loc [1] > 0:
+            if currentState[loc[0]-1][loc[1]-1] == 14 + opponCol:
+                return True
+            elif currentState[loc[0]-1][loc[1]-1] == 8 + opponCol:
+                return checkFreezer((loc[0]-1, loc[1]-1), currentState)
+        if loc [1] < 7:
+            if currentState[loc[0]-1][loc[1]+1] == 14 + opponCol:
+                return True
+            elif currentState[loc[0]-1][loc[1]+1] == 8 + opponCol:
+                return checkFreezer((loc[0]+1, loc[1]), currentState)
     if loc[0] < 7:
-        if currentState[loc[0]+1][loc[1]] == 14 + opponCol:
+        if currentState[loc[0]+1][loc[1]] == 8 + opponCol:
+            return checkFreezer((loc[0]+1, loc[1]), currentState)
+        elif currentState[loc[0]+1][loc[1]] == 14 + opponCol:
             return True
-        if loc [1] > 0 and currentState[loc[0]+1][loc[1]-1] == 14 + opponCol:
+        if loc [1] > 0:
+            if currentState[loc[0]+1][loc[1]-1] == 14 + opponCol:
+                return True
+            elif currentState[loc[0]+1][loc[1]-1] == 8 + opponCol:
+                return checkFreezer((loc[0]+1, loc[1]-1), currentState)
+        if loc [1] < 7:
+            if currentState[loc[0]+1][loc[1]+1] == 14 + opponCol:
+                return True
+            elif currentState[loc[0]+1][loc[1]+1] == 8 + opponCol:
+                return checkFreezer((loc[0]+1, loc[1]+1), currentState)
+    if loc [1] > 0:
+        if currentState[loc[0]][loc[1]-1] == 14 + opponCol:
             return True
-        if loc [1] < 7 and currentState[loc[0]+1][loc[1]+1] == 14 + opponCol:
+        elif currentState[loc[0]][loc[1]-1] == 8 + opponCol:
+            return checkFreezer((loc[0], loc[1]-1), currentState)
+    if loc [1] < 7:
+        if currentState[loc[0]][loc[1]+1] == 14 + opponCol:
             return True
-    if loc [1] > 0 and currentState[loc[0]][loc[1]-1] == 14 + opponCol:
-        return True
-    if loc [1] < 7 and currentState[loc[0]][loc[1]+1] == 14 + opponCol:
-        return True
+        elif currentState[loc[0]][loc[1]+1] == 8 + opponCol:
+            return checkFreezer((loc[0], loc[1]+1), currentState)
 
     return False
 
@@ -557,5 +791,13 @@ def staticEval(state):
                     sum += len(blackP)
                     sum -= len(whiteP)
     return sum
+
+def staticEval(states, nMoves, startTime, timelimit): #accepts a list of states and also the number of moves
+    total = 0
+    for state in states:
+        if time.time() - startTime < timelimit*0.97:
+            break
+        total += staticEval(state)
+    return total / len(states)
 
 
