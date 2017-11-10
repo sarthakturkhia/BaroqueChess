@@ -33,6 +33,7 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
 
     # Fix up whose turn it will be.
     newState.whose_move = 1 - currentState.whose_move
+    whoseMove = newState.whose_move
 
     board = newState.board
     startAt = time.time()
@@ -48,13 +49,13 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
         depthXrating = 100000 #reset rating to something big
         for listOfStates in allStates:
             lastboard = listOfStates[len(listOfStates)-1] #look at the last state in a list of states
-            allMoves = getAllMoves(lastboard, whoseMov) #get all possible moves from that last state
+            allMoves = getAllMoves(lastboard, whoseMove) #get all possible moves from that last state
 
             if time.time() - startAt < timelimit*0.97:
                 break
 
             for move in allMoves:
-                newlist = listOfStates.append(getState(lastboard, move))
+                newlist = listOfStates.append(getState(move, lastboard))
                 rating = ((-1)**newState.whose_move)*staticEval(newlist, len(allMoves), startAt, timelimit)
                 #rating => the smaller, the better it is for US, THIS player
                 #if we are white, whosemove=1, good move = big => -1**whosemove good move = small
@@ -68,6 +69,8 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
 
                 if time.time() - startAt < timelimit*0.97:
                     break
+
+            whoseMove = 1 - whoseMove
         
         if time.time() - startAt < timelimit*0.97:
             break
@@ -152,9 +155,32 @@ def getAllMoves(currentState, whose_move):
                     moves.append([((i,j),(x,y)) for (x,y) in other([i,j], currentState)])
     return moves # moves is a list of elements in the form of ((x,y),(x2,y2))
 
+#kinghelper(loc, state, opoColor)
 # takes a move and returns a new state of the complete board after the move was made
-def getState(currentstate, move): #(move: ((x,y),(x2,y2)) ) #pass in individual moves instead of list
-    
+def getState(move, state): #(move: ((x,y),(x2,y2)) ) #pass in individual moves instead of list
+    resultstate = state
+    intlLoc = move[0]
+    goalLoc = move[1]
+    piece = state[inilLoc[1]][inilLoc[0]]
+
+    color = state[inilLoc[1]][inilLoc[0]] % 2
+    opoColor = 1 - color
+
+    #withdrawer
+    elif piece - color == 10:
+        if len(kingHelper(intlLoc, state, opoColor)) != 0:
+            dirY = inilLoc[0]-goalLoc[0]
+            dirX = inilLoc[1]-goalLoc[1]
+            if dirY != 0:
+                dirY = dirY/abs(dirY)
+            if dirX != 0:
+                dirX = dirX/abs(dirX)
+            opoY = intlLoc[0]-dirY
+            opoX = intlLoc[1]-dirX
+            if opoY in range(8) & opoX in range(8) & resultstate[opoY][opoX]%2 == opoColor:
+                resultstate[opoY][opoX] = 0
+
+
 
 #If our king is on check this method makes the moves to protect the king.
 def ifonCheck():
