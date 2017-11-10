@@ -79,6 +79,7 @@ def parse(bs): # bs is board string
     rss = rs8[iy].split(' ');
     for jx in range(8):
       b[iy][jx] = INIT_TO_CODE[rss[jx]]
+  print(b)
   return b
 
 

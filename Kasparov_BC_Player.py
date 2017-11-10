@@ -32,7 +32,7 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
     newState = BC.BC_state(currentState.board)
 
     # Fix up whose turn it will be.
-    newState.whose_move = 1 - currentState.whose_move
+    # newState.whose_move = 1 - currentState.whose_move
     whoseMove = newState.whose_move
 
     board = newState.board
@@ -50,7 +50,7 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
             lastboard = listOfStates[len(listOfStates)-1] #look at the last state in a list of states
             allMoves = getAllMoves(lastboard, whoseMove) #get all possible moves from that last state
             newlist = []
-            #print(allMoves)
+            print(allMoves)
             #print("\n")
             if startAt - time.time() > timelimit*0.97:
                 break
@@ -165,7 +165,7 @@ def getState(move, state):
                 dirX = dirX/abs(dirX)
             opoY = intlLoc[0]-dirY
             opoX = intlLoc[1]-dirX
-            if opoY in range(8) & opoX in range(8) & resultstate[opoY][opoX]%2 == opoColor:
+            if opoY in range(8) and opoX in range(8) and resultstate[opoY][opoX]%2 == opoColor:
                 resultstate[opoY][opoX] = 0
 
     # imitator
@@ -222,31 +222,31 @@ def getMoveBeforeAfter(oldstate, newstate):
     move = ((-1,-1),(-1,-1))
     for i in range(7):
         for j in range(7):
-            if not oldstate[i][j] == newstate[i][j] & oldstate[i][j] == 0:
+            if not oldstate[i][j] == newstate[i][j] and oldstate[i][j] == 0:
                 move[1][0] = i
                 move[1][1] = j
-            elif not oldstate[i][j] == newstate[i][j] & newstate[i][j] == 0:
+            elif not oldstate[i][j] == newstate[i][j] and newstate[i][j] == 0:
                 move[0][0] = i
                 move[0][1] = j
     return move
 
 def getAllMoves(currentState, whose_move):
     moves = []
-    for i in range(7):
-        for j in range(7):
+    for i in range(8):
+        for j in range(8):
             current = currentState[i][j]
-            if current%2 == whose_move:
+            if current != 0 and current%2 == whose_move:
                 current = current - current%2
                 if current == 2:
-                    moves += [[[i,j],[x,y]] for [x,y] in pincer([i,j], currentState)]
+                    moves += [[[j,i],[x,y]] for [x,y] in pincer([j,i], currentState)]
                 elif current == 6:
-                    moves += [[[i,j],[x,y]] for [x,y] in knight([i,j], currentState)]
+                    moves += [[[j,i],[x,y]] for [x,y] in knight([j,i], currentState)]
                 elif current == 8:
-                    moves += [[[i,j],[x,y]] for [x,y] in imitator([i,j], currentState)]
+                    moves += [[[j,i],[x,y]] for [x,y] in imitator([i,j], currentState)]
                 elif current == 12:
-                    moves += [[[i,j],[x,y]] for [x,y] in king([i,j], currentState)]
+                    moves += [[[j,i],[x,y]] for [x,y] in king([j,i], currentState)]
                 else:
-                    moves += [[[i,j],[x,y]] for [x,y] in other([i,j], currentState)]
+                    moves += [[[j,i],[x,y]] for [x,y] in other([j,i], currentState)]
     return moves # moves is a list of elements in the form of ((x,y),(x2,y2))
     
 # These functions should take a position as a parameter and return a list of all possible positions of that piece
@@ -309,6 +309,8 @@ def kingHelper(x, currentState, opoCol):
     return result
 
 def pincer(loc, currentState):
+    # currentState = [[4, 6, 8, 10, 12, 8, 6, 14], [2, 2, 2, 2, 2, 2, 2, 2], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0], [3, 3, 3, 3, 3, 3, 3, 3], [15, 7, 9, 11, 13, 9, 7, 5]]
+    # loc = [0, 1]
     result = []
     if checkFreezer(loc, currentState):
         return result
@@ -485,7 +487,7 @@ def imitator(loc, currentState):
         x = loc[0] - (1+i)
         y = loc[1]
         if x >= 0:
-            if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
+            if currentState[x][y] == 6 + opponCol and ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
                 break
@@ -500,7 +502,7 @@ def imitator(loc, currentState):
         x = loc[0] + (1+i)
         y = loc[1]
         if x <= 7:
-            if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
+            if currentState[x][y] == 6 + opponCol and ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
                 break
@@ -515,7 +517,7 @@ def imitator(loc, currentState):
         x = loc[0]
         y = loc[1] + (1+i)
         if y <= 7:
-            if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
+            if currentState[x][y] == 6 + opponCol and ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
                 break
@@ -530,7 +532,7 @@ def imitator(loc, currentState):
         x = loc[0]
         y = loc[1] - (1+i)
         if y >= 0:
-            if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
+            if currentState[x][y] == 6 + opponCol and ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
                 break
@@ -544,8 +546,8 @@ def imitator(loc, currentState):
     for i in range(7):
         x = loc[0] - (1+i)
         y = loc[1] + (1+i)
-        if x >= 0 & y <= 7:
-            if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
+        if x >= 0 and y <= 7:
+            if currentState[x][y] == 6 + opponCol and ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
                 break
@@ -559,8 +561,8 @@ def imitator(loc, currentState):
     for i in range(7):
         x = loc[0] - (1+i)
         y = loc[1] - (1+i)
-        if x >= 0 & y >= 0:
-            if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
+        if x >= 0 and y >= 0:
+            if currentState[x][y] == 6 + opponCol and ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
                 break
@@ -574,8 +576,8 @@ def imitator(loc, currentState):
     for i in range(7):
         x = loc[0] + (1+i)
         y = loc[1] - (1+i)
-        if x <= 7 & y >= 0:
-            if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
+        if x <= 7 and y >= 0:
+            if currentState[x][y] == 6 + opponCol and ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
                 break
@@ -589,8 +591,8 @@ def imitator(loc, currentState):
     for i in range(7):
         x = loc[0] + (1+i)
         y = loc[1] + (1+i)
-        if x <= 7 & y <= 7:
-            if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
+        if x <= 7 and y <= 7:
+            if currentState[x][y] == 6 + opponCol and ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
                 break
@@ -663,7 +665,7 @@ def other(loc, currentState):
     for i in range(7):
         x = loc[0] - (1+i)
         y = loc[1] + (1+i)
-        if x >= 0 & y <= 7:
+        if x >= 0 and y <= 7:
             if currentState[y][x] != 0: #non-empty space, stop checking direction
                 break;
             else:
@@ -675,7 +677,7 @@ def other(loc, currentState):
     for i in range(7):
         x = loc[0] - (1+i)
         y = loc[1] - (1+i)
-        if x >= 0 & y >= 0:
+        if x >= 0 and y >= 0:
             if currentState[y][x] != 0: #non-empty space, stop checking direction
                 break;
             else:
@@ -687,7 +689,7 @@ def other(loc, currentState):
     for i in range(7):
         x = loc[0] + (1+i)
         y = loc[1] - (1+i)
-        if x <= 7 & y >= 0:
+        if x <= 7 and y >= 0:
             if currentState[y][x] != 0: #non-empty space, stop checking direction
                 break;
             else:
@@ -699,7 +701,7 @@ def other(loc, currentState):
     for i in range(7):
         x = loc[0] + (1+i)
         y = loc[1] + (1+i)
-        if x <= 7 & y <= 7:
+        if x <= 7 and y <= 7:
             if currentState[y][x] != 0: #non-empty space, stop checking direction
                 break;
             else:
@@ -770,7 +772,7 @@ def prepare(player2Nickname):
 # the position index in comparision to opponents
 # pieces and our pieces in the kings diagonals, verticals and horizontals.
 def staticEval(state):
-    print(state)
+    # print(state)
     sum = 0
     for i in range(8):
         for j in range(8):
@@ -820,4 +822,4 @@ def staticEval2(states, nMoves, startTime, timelimit): #accepts a list of states
         total += staticEval(state)
     return total / len(states)
 
-
+# print(pincer())
