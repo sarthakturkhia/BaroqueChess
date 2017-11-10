@@ -81,6 +81,7 @@ def parse(bs): # bs is board string
       b[iy][jx] = INIT_TO_CODE[rss[jx]]
   return b
 
+
 INITIAL = parse('''
 c l i w k i l f
 p p p p p p p p

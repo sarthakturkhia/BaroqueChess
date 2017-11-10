@@ -93,6 +93,100 @@ def makeMove(currentState, currentRemark, timelimit): #time limit in miliseconds
 
     return [[move, newState], newRemark]
 
+# takes a move and returns a new state of the complete board after the move was made
+def getState(move, state):
+    resultstate = state
+    intlLoc = move[0]
+    goalLoc = move[1]
+    piece = state[intlLoc[1]][intlLoc[0]]
+    # assumes the initial location won't be 0 in state
+    color = state[intlLoc[1]][intlLoc[0]] % 2
+    opoColor = 1 - color
+    # pincer
+    if piece - color ==  2:
+        if len(kingHelper(goalLoc, state, opoColor)) != 0:
+            # +x east
+            x = min(goalLoc[0] + 1, 7)
+            if state[goalLoc[1]][x] % 2 != color:
+                x1 = state[goalLoc[1]][min(x + 1, 7)]
+                if x1 % 2 == color and x1 != 0:
+                    resultstate[goalLoc[1]][x] = 0
+            # -x west
+            x = max(goalLoc[0] - 1, 0)
+            if state[goalLoc[1]][x] % 2 != color:
+                x1 = state[goalLoc[1]][max(x - 1, 0)]
+                if x1 % 2 == color and x1 != 0:
+                    resultstate[goalLoc[1]][x] = 0
+            # +y north
+            x = min(goalLoc[1] + 1, 7)
+            if state[x][goalLoc[0]] % 2 == opoColor:
+                x1 = state[min(x + 1, 7)][goalLoc[0]]
+                if x1 % 2 == color and x1 != 0:
+                    resultstate[x][goalLoc[0]] = 0
+            # -y south
+            x = max(goalLoc[0] - 1, 0)
+            if state[x][goalLoc[0]] % 2 != color:
+                x1 = state[max(x - 1, 0)][goalLoc[1]]
+                if x1 % 2 == color and x1 != 0:
+                    resultstate[x][goalLoc[0]] = 0
+    # Leaper
+    elif piece - color ==  6:
+        diffX = goalLoc[0] - intlLoc[0]
+        diffY = goalLoc[1] - intlLoc[1]
+        x = diffX/abs(diffX)
+        y = diffY/abs(diffY)
+        for i in range(abs(diffX)):
+            resultstate[intlLoc[1]+(i*y)][intlLoc[0]+(i*x)] = 0
+    # coordinator
+    elif piece - color == 4:
+        kingsLoc = [-1, -1]
+        for i in range(8):
+            for j in range(8):
+                if state[j][i] == 12 + color:
+                    kingsLoc = [j,i]
+                    break
+            if kingsLoc[0] != -1:
+                break
+
+        if state[goalLoc[1]][kingsLoc[0]] % 2 == opoColor:
+            resultstate[goalLoc[1]][kingsLoc[0]] = 0
+
+        if state[kingsLoc[1]][goalLoc[0]] % 2 == opoColor:
+            resultstate[kingsLoc[1]][goalLoc[0]] = 0
+    
+    # withdrawer
+    elif piece - color == 10:
+        if len(kingHelper(intlLoc, state, opoColor)) != 0:
+            dirY = inilLoc[0]-goalLoc[0]
+            dirX = inilLoc[1]-goalLoc[1]
+            if dirY != 0:
+                dirY = dirY/abs(dirY)
+            if dirX != 0:
+                dirX = dirX/abs(dirX)
+            opoY = intlLoc[0]-dirY
+            opoX = intlLoc[1]-dirX
+            if opoY in range(8) & opoX in range(8) & resultstate[opoY][opoX]%2 == opoColor:
+                resultstate[opoY][opoX] = 0
+
+    # imitator
+    elif piece - color == 8:
+        # knight
+        resultstate[intlLoc[1]][intlLoc[0]] = 6 + color
+        resultstate = getState(move, resultstate)
+        # cordinator
+        resultstate[intlLoc[1]][intlLoc[0]] = 4 + color
+        resultstate = getState(move, resultstate)
+        # pincer
+        resultstate[intlLoc[1]][intlLoc[0]] = 2 + color
+        resultstate = getState(move, resultstate)
+        # withdrawer
+        resultstate[intlLoc[1]][intlLoc[0]] = 10 + color
+        resultstate = getState(move, resultstate)
+
+    resultstate[intlLoc[1]][intlLoc[0]] = 0
+    resultstate[goalLoc[1]][goalLoc[0]] = piece
+    return resultstate
+
 def getRemark(score):
     if score > 500:
         return "uh oh."
@@ -146,7 +240,7 @@ def getAllMoves(currentState, whose_move):
                 if current == 2:
                     moves.append([((i,j),(x,y)) for (x,y) in pincer([i,j], currentState)])
                 elif current == 6:
-                    moves.append([((i,j),(x,y)) for (x,y) in Knight([i,j], currentState)])
+                    moves.append([((i,j),(x,y)) for (x,y) in knight([i,j], currentState)])
                 elif current == 8:
                     moves.append([((i,j),(x,y)) for (x,y) in imitator([i,j], currentState)])
                 elif current == 12:
@@ -154,47 +248,228 @@ def getAllMoves(currentState, whose_move):
                 else:
                     moves.append([((i,j),(x,y)) for (x,y) in other([i,j], currentState)])
     return moves # moves is a list of elements in the form of ((x,y),(x2,y2))
-
-#kinghelper(loc, state, opoColor)
-# takes a move and returns a new state of the complete board after the move was made
-def getState(move, state): #(move: ((x,y),(x2,y2)) ) #pass in individual moves instead of list
-    resultstate = state
-    intlLoc = move[0]
-    goalLoc = move[1]
-    piece = state[inilLoc[1]][inilLoc[0]]
-
-    color = state[inilLoc[1]][inilLoc[0]] % 2
-    opoColor = 1 - color
-
-    #withdrawer
-    elif piece - color == 10:
-        if len(kingHelper(intlLoc, state, opoColor)) != 0:
-            dirY = inilLoc[0]-goalLoc[0]
-            dirX = inilLoc[1]-goalLoc[1]
-            if dirY != 0:
-                dirY = dirY/abs(dirY)
-            if dirX != 0:
-                dirX = dirX/abs(dirX)
-            opoY = intlLoc[0]-dirY
-            opoX = intlLoc[1]-dirX
-            if opoY in range(8) & opoX in range(8) & resultstate[opoY][opoX]%2 == opoColor:
-                resultstate[opoY][opoX] = 0
-
-
-
-#If our king is on check this method makes the moves to protect the king.
-def ifonCheck():
-    
-# IF our piece is already checking the opponents king then try to finish the game.
-def ifattacking():
     
 # These functions should take a position as a parameter and return a list of all possible positions of that piece
-def king():
-    
-def pincer():
-    
-def Knight():
-    
+def king(loc, currentState):
+    result = []
+    color = currentState[loc[1]][loc[0]] % 2
+    opponCol = 1 - color  # opponent's color
+    if checkFreezer(loc, currentState):
+        return result
+    else:
+        x = [min(loc[0] + 1, 7), loc[1]]
+        if currentState[x[1]][x[0]] == 0 or currentState[x[1]][x[0]] % 2 == opponCol:
+            result.append(x)
+        x = [min(loc[0] + 1, 7), min(loc[1] + 1, 7)]
+        if currentState[x[1]][x[0]] == 0 or currentState[x[1]][x[0]] % 2 == opponCol:
+            result.append(x)
+        x = [min(loc[0] + 1, 7), max(loc[1] - 1, 0)]
+        if currentState[x[1]][x[0]] == 0 or currentState[x[1]][x[0]] % 2 == opponCol:
+            result.append(x)
+        x = [max(loc[0] - 1, 0), max(loc[1] - 1, 0)]
+        if currentState[x[1]][x[0]] == 0 or currentState[x[1]][x[0]] % 2 == opponCol:
+            result.append(x)
+        x = [max(loc[0] - 1, 0), min(loc[1] + 1, 7)]
+        if currentState[x[1]][x[0]] == 0 or currentState[x[1]][x[0]] % 2 == opponCol:
+            result.append(x)
+        x = [max(loc[0] - 1, 0), loc[1]]
+        if currentState[x[1]][x[0]] == 0 or currentState[x[1]][x[0]] % 2 == opponCol:
+            result.append(x)
+        x = [loc[0], min(loc[1] + 1, 7)]
+        if currentState[x[1]][x[0]] == 0 or currentState[x[1]][x[0]] % 2 == opponCol:
+            result.append(x)
+        x = [loc[0], max(loc[1] - 1, 0)]
+        if currentState[x[1]][x[0]] == 0 or currentState[x[1]][x[0]] % 2 == opponCol:
+            result.append(x)
+        return result
+
+# returns a list of opposition pieces around a loc
+def kingHelper(x, currentState, opoCol):
+    result = []
+    y1 = min(x[1] + 1, 7)
+    x1 = min(x[0] + 1, 7)
+    y2 = max(x[1] - 1, 0)
+    x2 = max(x[0] - 1, 0)
+    if currentState[y1][x1] % 2 == opoCol and currentState[y1][x1] != 0:
+        result.append(currentState[y1][x1])
+    if currentState[y2][x1] % 2 == opoCol and currentState[y1][x1] != 0:
+        result.append(currentState[y2][x1])
+    if currentState[y1][x2] % 2 == opoCol and currentState[y1][x1] != 0:
+        result.append(currentState[y1][x2])
+    if currentState[y2][x2] % 2 == opoCol and currentState[y1][x1] != 0:
+        result.append(currentState[y2][x2])
+    if currentState[y1][x[0]] % 2 == opoCol and currentState[y1][x1] != 0:
+        result.append(currentState[y1][x[0]])
+    if currentState[y2][x[0]] % 2 == opoCol and currentState[y1][x1] != 0:
+        result.append(currentState[y2][x[0]])
+    if currentState[x[1]][x1] % 2 == opoCol and currentState[y1][x1] != 0:
+        result.append(currentState[x[1]][x1])
+    if currentState[x[1]][x2] % 2 == opoCol and currentState[y1][x1] != 0:
+        result.append(currentState[x[1]][x2])
+    return result
+
+def pincer(loc, currentState):
+    result = []
+    if checkFreezer(loc, currentState):
+        return result
+    else:
+        # +x direction
+        for i in range(1,7):
+            x = min(loc[0] + i, 7)
+            box1 = currentState[loc[1]][x]
+            if box1 != 0 : break
+            else : result.append([x, loc[1]])
+            if x == 7 : break
+        # -x direction
+        for i in range(1,7):
+            x = max(loc[0] - i, 0)
+            box2 = currentState[loc[1]][x]
+            if box2 != 0 : break
+            else : result.append([x, loc[1]])
+            if x == 0 : break
+        # +y direction
+        for i in range(1,7):
+            y = min(loc[1] + i, 7)
+            box3 = currentState[y][loc[0]]
+            if box3 != 0 : break
+            else:result.append([loc[0], y])
+            if y == 7 : break
+        # -y direction
+        for i in range(1,7):
+            y = max(loc[1] - i, 0)
+            box4 = currentState[y][loc[0]]
+            if box4 != 0 : break
+            else : result.append([loc[0], y])
+            if y == 0 : break
+        return result
+
+# The leaper
+def knight(loc, currentState):
+    moves = []
+    if checkFreezer(loc, currentState):
+        return moves
+    color = currentState[loc[1]][loc[0]] % 2
+    found = False
+    # check west
+    for i in range(7):
+        x = loc[0] - (1 + i)
+        y = loc[1]
+        if x >= 0:
+            if currentState[y][x] != 0:  # non-empty space
+                if currentState[y][x] % 2 == color: break
+                elif not found: found = True
+                else: break
+            else:
+                moves.append((x, y))
+        else:
+            break
+
+    found = False
+    # check east
+    for i in range(7):
+        x = loc[0] + (1 + i)
+        y = loc[1]
+        if x <= 7:
+            if currentState[y][x] != 0:  # non-empty space
+                if currentState[y][x] % 2 == color: break
+                elif not found: found = True
+                else: break
+            else:
+                moves.append((x, y))
+        else:
+            break
+
+    found = False
+    # check south
+    for i in range(7):
+        x = loc[0]
+        y = loc[1] + (1 + i)
+        if y <= 7:
+            if currentState[y][x] != 0:  # non-empty space
+                if currentState[y][x] % 2 == color: break
+                elif not found: found = True
+                else: break
+            else:
+                moves.append((x, y))
+        else:
+            break
+
+    found = False
+    # check north
+    for i in range(7):
+        x = loc[0]
+        y = loc[1] - (1 + i)
+        if y >= 0:
+            if currentState[y][x] != 0:  # non-empty space
+                if currentState[y][x] % 2 == color: break
+                elif not found: found = True
+                else: break
+            else:
+                moves.append((x, y))
+        else:
+            break
+
+    found = False
+    # check southwest
+    for i in range(7):
+        x = loc[0] - (1 + i)
+        y = loc[1] + (1 + i)
+        if x >= 0 and y <= 7:
+            if currentState[y][x] != 0:  # non-empty space
+                if currentState[y][x] % 2 == color: break
+                elif not found: found = True
+                else: break
+            else:
+                moves.append((x, y))
+        else:
+            break
+
+    found = False
+    # check northwest
+    for i in range(7):
+        x = loc[0] - (1 + i)
+        y = loc[1] - (1 + i)
+        if x >= 0 and y >= 0:
+            if currentState[y][x] != 0:  # non-empty space
+                if currentState[y][x] % 2 == color: break
+                elif not found: found = True
+                else: break
+            else:
+                moves.append((x, y))
+        else:
+            break;
+
+    found = False
+    # check northeast
+    for i in range(7):
+        x = loc[0] + (1 + i)
+        y = loc[1] - (1 + i)
+        if x <= 7 and y >= 0:
+            if currentState[y][x] != 0:  # non-empty space
+                if currentState[y][x] % 2 == color: break
+                elif not found: found = True
+                else: break
+            else:
+                moves.append((x, y))
+        else:
+            break;
+
+    found = False
+    # check southeast
+    for i in range(7):
+        x = loc[0] + (1 + i)
+        y = loc[1] + (1 + i)
+        if x <= 7 and y <= 7:
+            if currentState[y][x] != 0:  # non-empty space
+                if currentState[y][x] % 2 == color: break
+                elif not found: found = True
+                else: break
+            else:
+                moves.append((x, y))
+        else:
+            break
+    return moves
+
 def imitator(loc, currentState):
     moves = []
     if checkFreezer(loc, currentState): 
@@ -213,11 +488,11 @@ def imitator(loc, currentState):
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check east
@@ -228,41 +503,41 @@ def imitator(loc, currentState):
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check south
     for i in range(7):
-        x = loc[0] 
+        x = loc[0]
         y = loc[1] + (1+i)
         if y <= 7:
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check north
     for i in range(7):
-        x = loc[0] 
+        x = loc[0]
         y = loc[1] - (1+i)
         if y >= 0:
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check southwest
@@ -273,11 +548,11 @@ def imitator(loc, currentState):
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check northwest
@@ -288,11 +563,11 @@ def imitator(loc, currentState):
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check northeast
@@ -303,11 +578,11 @@ def imitator(loc, currentState):
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
     passLeap = False
 
     #check southeast
@@ -318,12 +593,15 @@ def imitator(loc, currentState):
             if currentState[x][y] == 6 + opponCol & ~passLeap: #opposing leaper
                 passLeap = True
             elif currentState[x][y] != 0: #non-empty space, not leaper
-                break;
+                break
             else:
                 moves.append((x,y))
         else:
-            break;
+            break
+
     return moves
+
+
 
 def other(loc, currentState):
     moves = []
@@ -488,15 +766,56 @@ def introduce():
 def prepare(player2Nickname):
     pass
 
+# Mathematical sum of all the pieces we have based on a point system.
+# the position index in comparision to opponents
+# pieces and our pieces in the kings diagonals, verticals and horizontals.
+def staticEval(state):
+    sum = 0
+    for i in range(8):
+        for j in range(8):
+            x = state[i][j]
+            if x != 0:
+                if i < 2 and x % 2 == 1:
+                    sum += 1
+                if i > 5 and x % 2 == 0:
+                    sum -= 1
+                # checks the number of opponents the freezer has trapped
+                if x == 14:
+                    sum -= (len(kingHelper([j,i], state, 1)) * 3)
+                if x == 15:
+                    sum += (len(kingHelper([j, i], state, 0)) * 3)
+                # when piece is king checks surrounding places for opponents
+                if x == 12:
+                    sum -= 1000
+                    sum += len(kingHelper([j,i], state, 1))
+                elif x == 13:
+                    sum += 1000
+                    sum -= len(kingHelper([j, i], state, 0))
+                # pincers
+                elif x == 2:
+                    sum -= 2
+                elif x == 3:
+                    sum += 2
+                # all others
+                elif x % 2 == 0:
+                    sum -= 4
+                elif x % 2 == 1:
+                    sum += 4
+            # Check the middle squares
+            if i == 3 or i == 4:
+                if j == 3 or j == 4:
+                    blackP = kingHelper([j,i], state, 1)
+                    whiteP = kingHelper([j,i], state, 0)
+                    sum += len(blackP)
+                    sum -= len(whiteP)
+    return sum
+
 def staticEval(states, nMoves, startTime, timelimit): #accepts a list of states and also the number of moves
     total = 0
     for state in states:
-        if time.time() - startAt < timelimit*0.97:
+        if time.time() - startTime < timelimit*0.97:
             break
         total += staticEval(state)
     return total / len(states)
 
-# Mathematical sum of all the pieces we have based on a point system. + the position index in comparision to opponents
-# pieces and our pieces in the kings diagonals, verticals and horizontals. subtract the same for our opponent from this sum.
-def staticEval(states):
-    return 
+
