@@ -14,7 +14,7 @@ VERSION = '0.8-BETA'
 
 import sys
 TIME_PER_MOVE = 0.5 # default time limit is half a second.
-TURN_LIMIT = 5   # Good for testing.
+TURN_LIMIT = 50   # Good for testing.
 #TURN_LIMIT = 100 # Terminates runaway games.
 if len(sys.argv) > 1:
     import importlib    
@@ -23,8 +23,8 @@ if len(sys.argv) > 1:
     if len(sys.argv) > 3:
         TIME_PER_MOVE = float(sys.argv[3])
 else:
-    import PlayerSkeletonA as player1
-    import PlayerSkeletonB as player2
+    import Kasparov_BC_Player as player1
+    import Diogenes_BC_Player as player2
 
 import BC_state_etc as BC
 
